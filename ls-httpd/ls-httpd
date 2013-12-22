@@ -1,0 +1,47 @@
+#!/bin/bash
+# Usage
+# ls-httpd type count|time [log_file]
+# Eg: 
+# ls-httpd url 1000
+# will find top URLs in the last 1000 access log entries
+# ls-httpd ip 1000
+# will find top IPs in the last 1000 access log entries
+# ls-httpd agent 1000
+# will find top user agents in the last 1000 access log entries
+# ls-httpd url 17:
+# will find top URLs from 17:00:00 to 17:59:59
+# ls-httpd url 17:2
+# will find top URLs from 17:20:00 to 17:29:59
+# ls-httpd url 17
+# will find top URLs in the last 17 access log entries :-)
+
+type=$1
+length=$2
+
+echo "$2" | grep -q ":"
+if [ $? -eq 0 ]; then
+  time="\[`date +%d/%b/%Y:`$2"
+fi
+
+if [ "$3" == "" ]; then
+  log_file="/var/log/apache2/access.log"
+else
+  log_file="$3"
+fi
+
+sep="\""
+if [ "$type" = "ip" ]; then
+  field=1
+  sep=" "
+elif [ "$type" = "agent" ]; then
+  field=6
+elif [ "$type" = "url" ]; then
+  field=2
+fi
+
+if [ "$time" != "" ]; then
+  grep "$time" $log_file | awk -F"$sep" -v field=$field '{print $field}'| sort -n | uniq -c | sort -n
+else
+  tail -n $length $log_file | awk -F"$sep" -v field=$field '{print $field}'| sort -n | uniq -c | sort -n
+fi
+
